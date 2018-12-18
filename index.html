@@ -165,7 +165,7 @@
                     if(($(this).offset().left >= $('#man').offset().left && $(this).offset().left <= $('#man').offset().left + $('#man').width()) || ($(this).offset().left + childWidth >= $('#man').offset().left && $(this).offset().left + childWidth <= $('#man').offset().left + $('#man').width())){
                         
                         if($(this).hasClass('star')){
-                            $(this).stop().remove();
+                            $(this).remove();
                             addScore();
                         }
                         if($(this).hasClass('boom')){
