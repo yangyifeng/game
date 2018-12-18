@@ -63,7 +63,7 @@
             <img src="./assets/img/man.png" id="man">
         </div>
     </body>
-    <script src="./assets/js/jquery-1.11.2.min.js"></script>
+    <script src="./assets/js/zepto.min.js"></script>
     <script type="text/javascript">
 
         //定时器
@@ -92,8 +92,9 @@
 
         //停止所有动画
         function stopAnimate(){
-            $('.star').stop();
-            $('.boom').stop();
+            //$('.star').stop();
+            //$('.boom').stop();
+            $('.child').remove();
             $('#man').off('touchmove');
             clearInterval(ticker);
             $('.begin').show();
@@ -121,7 +122,7 @@
         //人
         function loadMan(){
             $('#man').on('touchmove', function(ev){
-                var cx = ev.originalEvent.targetTouches[0].pageX;
+                var cx = ev.targetTouches[0].pageX;
                 //人的中心点
                 if(cx >= $('#man').width()/2 && cx <= screen.width - $('#man').width()/2){
                     $('#man').css('left', cx-$('#man').width()/2);
