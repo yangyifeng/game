@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=0">
+        <title>test</title>
+        <style>
+            *{
+                padding:0;
+                margin: 0;
+            }
+            body,html{
+                height: 100%;
+                overflow: hidden;
+            }
+            #stage{
+                width: 100%;
+                height: 100%;
+                position: relative;
+            }
+            #man{
+                width: 44px;
+                position: absolute;
+                bottom: 0;
+                left: 50%;
+            }
+            .score{
+                font-size: 30px;
+                padding: 10px;
+                position: absolute;
+                right: 10px;
+            }
+            .over{
+                font-size: 40px;
+                font-weight: bolder;
+                color: #FF0000;
+                text-align: center;
+                position: absolute;
+                top: 50%;
+                width: 100%;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="stage">
+            <div class="score">0</div>
+            <img src="./assets/img/man.png" id="man">
+        </div>
+    </body>
+    <script src="./assets/js/jquery-1.11.2.min.js"></script>
+    <script type="text/javascript">
+
+        //定时器
+        var ticker;
+        //碰撞星星数量
+        var hitStar = 0;
+
+        //星星，炸弹的尺寸一样
+        var childWidth = 44;
+        var childHeight = 44;
+
+
+        $(document).ready(function(){
+            initGame();
+        });
+
+        //随机数
+        function randomNum(minNum,maxNum){ 
+            return parseInt(Math.random()*(maxNum-minNum+1)+minNum,10);
+        } 
+
+        //停止所有动画
+        function stopAnimate(){
+            $('.star').stop();
+            $('.boom').stop();
+            $('#man').off('touchmove');
+            clearInterval(ticker);
+            $('#stage').append('<div class="over">GAME OVER</div>');
+        }
+
+        //显示分数
+        function addScore(){
+            hitStar += 1;
+            $('.score').html(hitStar);
+        }
+
+        function initGame(){
+            hitStar = 0;
+            loadMan();
+            ticker = setInterval(function(){
+                checkChildren(10, 3);
+                hitTest();
+            }, 100);
+            
+        }
+
+        //人
+        function loadMan(){
+            $('#man').on('touchmove', function(ev){
+                var cx = ev.originalEvent.targetTouches[0].pageX;
+                //人的中心点
+                if(cx >= $('#man').width()/2 && cx <= screen.width - $('#man').width()/2){
+                    $('#man').css('left', cx-$('#man').width()/2);
+                }
+            });
+        }
+
+        function createChild(child, num){
+            for(var i=0; i<num; i++){
+                var tmp_id = child + '_' + randomNum(100000,999999);
+                var star = '<img src="./assets/img/'+child+'.png" id="'+ tmp_id +'" class="child '+child+'" width="'+ childWidth +'">';
+                $('#stage').append(star);
+                $('#'+tmp_id).css({
+                    position: 'absolute',
+                    top: 0,
+                    left: randomNum(0, screen.width-childWidth)
+                }).animate({
+                    top: screen.height - childHeight
+                }, randomNum(3,8)*1000, function(){
+                    $(this).remove();
+                });
+            }
+        }
+
+        //给舞台补充星星炸弹
+        function checkChildren(star, boom){
+            if($('.star').length < star){
+                createChild('star', star - $('.star').length);
+            }
+            if($('.boom').length < boom){
+                createChild('boom', boom - $('.boom').length);
+            }
+        }
+
+        //碰撞
+        function hitTest(){
+            $('.child').each(function(){
+                //四边形下面的边超过了「人」
+                if($(this).offset().top + childHeight > screen.height - $('#man').height()){
+                    //四边形左下角点或者右下角点在 「人」里面
+                    if(($(this).offset().left >= $('#man').offset().left && $(this).offset().left <= $('#man').offset().left + $('#man').width()) || ($(this).offset().left + childWidth >= $('#man').offset().left && $(this).offset().left + childWidth <= $('#man').offset().left + $('#man').width())){
+                        
+                        if($(this).hasClass('star')){
+                            $(this).stop().remove();
+                            addScore();
+                        }
+                        if($(this).hasClass('boom')){
+                            stopAnimate();
+                        }
+                    }
+                }
+
+            });
+        }
+
+    </script>
+</html>
