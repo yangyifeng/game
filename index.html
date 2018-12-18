@@ -36,13 +36,28 @@
                 color: #FF0000;
                 text-align: center;
                 position: absolute;
-                top: 50%;
+                top: 30%;
                 width: 100%;
+            }
+            .begin{
+                text-align: center;
+                position: absolute;
+                top: 45%;
+                width: 100%;
+            }
+            .begin button{
+                padding: 5px 10px;
+                font-size: 40px;
+                font-weight: bolder;
+                color: #4CAF50;
+                border: 10px #4CAF50 solid;
             }
         </style>
     </head>
     <body>
         <div id="stage">
+            <div class="over">GAME OVER</div>
+            <div class="begin"><button type="button">BEGIN</button></div>
             <div class="score">0</div>
             <img src="./assets/img/man.png" id="man">
         </div>
@@ -61,7 +76,12 @@
 
 
         $(document).ready(function(){
-            initGame();
+            $('.over').hide();
+            $('.begin button').click(function(){
+                $('.begin').hide();
+                $('.over').hide();
+                initGame();
+            });
         });
 
         //随机数
@@ -75,7 +95,8 @@
             $('.boom').stop();
             $('#man').off('touchmove');
             clearInterval(ticker);
-            $('#stage').append('<div class="over">GAME OVER</div>');
+            $('.begin').show();
+            $('.over').show();
         }
 
         //显示分数
@@ -86,9 +107,11 @@
 
         function initGame(){
             hitStar = 0;
+            $('.score').html(hitStar);
+            $('.child').remove();
             loadMan();
             ticker = setInterval(function(){
-                checkChildren(10, 3);
+                checkChildren(10, 5);
                 hitTest();
             }, 100);
             
@@ -109,7 +132,7 @@
             for(var i=0; i<num; i++){
                 var tmp_id = child + '_' + randomNum(100000,999999);
                 var star = '<img src="./assets/img/'+child+'.png" id="'+ tmp_id +'" class="child '+child+'" width="'+ childWidth +'">';
-                $('#stage').append(star);
+                $('#stage').prepend(star);
                 $('#'+tmp_id).css({
                     position: 'absolute',
                     top: 0,
