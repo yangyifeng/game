@@ -5,178 +5,213 @@
         <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=0">
         <title>test</title>
         <style>
-            *{
-                padding:0;
-                margin: 0;
-            }
             body,html{
                 height: 100%;
                 overflow: hidden;
             }
-            #stage{
-                width: 100%;
-                height: 100%;
-                position: relative;
-            }
-            #man{
-                width: 60px;
-                height: 100px;
-                position: absolute;
-                bottom: 0;
-                left: 50%;
-            }
-            .score{
-                font-size: 30px;
-                padding: 10px;
-                position: absolute;
-                right: 10px;
-            }
-            .over{
-                font-size: 40px;
-                font-weight: bolder;
-                color: #FF0000;
-                text-align: center;
-                position: absolute;
-                top: 30%;
-                width: 100%;
-            }
-            .begin{
-                text-align: center;
-                position: absolute;
-                top: 45%;
-                width: 100%;
-            }
-            .begin button{
-                padding: 5px 10px;
-                font-size: 40px;
-                font-weight: bolder;
-                color: #4CAF50;
-                border: 10px #4CAF50 solid;
+            *{
+                margin:0;
+                padding:0;
             }
         </style>
     </head>
     <body>
-        <div id="stage">
-            <div class="over" style="display:none">GAME OVER</div>
-            <div class="begin"><button type="button">BEGIN</button></div>
-            <div class="score">0</div>
-            <img src="./assets/img/man.png" id="man">
-        </div>
+        <canvas id="canvas"></canvas>
     </body>
-    <script src="./assets/js/zepto.min.js"></script>
+    <script src="./assets/js/easeljs.min.js"></script>
+    <script src="./assets/js/tweenjs.min.js"></script>
     <script type="text/javascript">
 
-        //定时器
-        var ticker;
-        //碰撞星星数量
-        var hitStar = 0;
+        //资源
+        var imgs = {
+            bg: {width: 375, height: 667, src: "./assets/img/bg.jpeg"},
+            man: {width:44, height: 80, src:"./assets/img/man.png"},
+            star: {width:44, height:44, src:"./assets/img/star.png"},
+            boom: {width:44, height:44, src:"./assets/img/boom.png"}
+        };
 
-        //星星，炸弹的尺寸一样
-        var childWidth = 44;
-        var childHeight = 44;
+        //星星计数
+        var starOnStage = {
+            all: 20, //每次存在 20
+            current: 0 //当前存在
+        };
 
+        //炸弹计数
+        var boomOnStage = {
+            all: 5, //每次存在 5 个
+            current: 0 //当前存在
+        };
 
-        $(document).ready(function(){
-            $('.over').hide();
-            $('.begin button').click(function(){
-                $('.begin').hide();
-                $('.over').hide();
-                initGame();
-            });
-        });
 
         //随机数
         function randomNum(minNum,maxNum){ 
             return parseInt(Math.random()*(maxNum-minNum+1)+minNum,10);
         } 
 
-        //停止所有动画
-        function stopAnimate(){
-            //$('.star').stop();
-            //$('.boom').stop();
-            $('.child').remove();
-            $('#man').off('touchmove');
-            clearInterval(ticker);
-            $('.begin').show();
-            $('.over').show();
-        }
+        //canvas 全屏
+        var canvas = document.querySelector('#canvas');
+        canvas.width =  document.documentElement.clientWidth;
+        canvas.height = document.documentElement.clientHeight;
 
-        //显示分数
-        function addScore(){
-            hitStar += 1;
-            $('.score').html(hitStar);
-        }
+        //创建舞台
+        var stage = new createjs.Stage(canvas);
+        //允许 touch
+        createjs.Touch.enable(stage);
 
-        function initGame(){
-            hitStar = 0;
-            $('.score').html(hitStar);
-            $('.child').remove();
-            loadMan();
-            ticker = setInterval(function(){
-                checkChildren(10, 5);
-                hitTest();
-            }, 10);
-            
-        }
+        //装载星星的容器
+        var starContainer = new createjs.Container();
+        //装载炸弹的容器
+        var boomContainer = new createjs.Container();
 
         //人
-        function loadMan(){
-            $('#man').on('touchmove', function(ev){
-                var cx = ev.targetTouches[0].pageX;
-                //人的中心点
-                if(cx >= $('#man').width()/2 && cx <= screen.width - $('#man').width()/2){
-                    $('#man').css('left', cx-$('#man').width()/2);
-                }
-            });
+        var man;
+        //得分
+        var score = 0;
+        //得分容器
+        var scoreContainer = new createjs.Container();
+
+        function init(){
+            addBg();
+            addMan();
+            addScore();
+
+            stage.addChild(starContainer);
+            stage.addChild(boomContainer);
+            stage.addChild(scoreContainer);
+
+            //舞台帧率控制
+            createjs.Ticker.setFPS(60);
+            //舞台每帧触发
+            createjs.Ticker.addEventListener("tick", tick);
         }
 
-        function createChild(child, num){
-            for(var i=0; i<num; i++){
-                var tmp_id = child + '_' + randomNum(100000,999999);
-                var star = '<img src="./assets/img/'+child+'.png" id="'+ tmp_id +'" class="child '+child+'" width="'+ childWidth +'">';
-                $('#stage').prepend(star);
-                $('#'+tmp_id).css({
-                    position: 'absolute',
-                    top: 0,
-                    left: randomNum(0, screen.width-childWidth)
-                }).animate({
-                    top: screen.height - childHeight
-                }, randomNum(3,8)*1000, function(){
-                    $(this).remove();
-                });
+        //背景
+        function addBg(){
+            var bg = new createjs.Bitmap(imgs.bg.src);
+            bg.x = 0;
+            bg.y = 0;
+            bg.scaleX = canvas.width / imgs.bg.width;
+            bg.scaleY = canvas.height / imgs.bg.height;
+            stage.addChild(bg);
+        }
+
+        //得分
+        function addScore(){
+            scoreContainer.removeChildAt(0);
+            var text = new createjs.Text("得分："+score, "30px Arial", "#000000");
+            text.x = 20;
+            text.y = 40;
+            text.textBaseline = "alphabetic";
+            scoreContainer.addChild(text);
+        }
+        
+        //人
+        function addMan(){
+            man = new createjs.Bitmap(imgs.man.src);
+            man.x = canvas.width / 2 - imgs.man.width / 2;
+            man.y = canvas.height - imgs.man.height;
+            man.addEventListener('pressmove', manMove);
+            stage.addChild(man);
+        }
+        function manMove(e){
+            if(e.stageX >= imgs.man.width/2 && e.stageX <= canvas.width - imgs.man.width/2){
+                man.x = e.stageX - imgs.man.width/2;
             }
         }
 
-        //给舞台补充星星炸弹
-        function checkChildren(star, boom){
-            if($('.star').length < star){
-                createChild('star', star - $('.star').length);
+        //星星
+        function addStar(){
+            //舞台中星星的数量超过了预设的总数，则退出
+            if(starOnStage.current > starOnStage.all){
+                return false;
             }
-            if($('.boom').length < boom){
-                createChild('boom', boom - $('.boom').length);
+            var tmp_num = starOnStage.all - starOnStage.current;
+            for(var i=0; i<tmp_num; i++){
+                var child = new createjs.Bitmap(imgs.star.src);
+                child.x = randomNum(0, canvas.width - imgs.star.width);
+                child.y = 0;
+                starContainer.addChild(child);
+                starOnStage.current++;
+                createjs.Tween.get(child).to({y:canvas.height},randomNum(3,8)*1000).call(starOut);
+
             }
         }
-
-        //碰撞
-        function hitTest(){
-            $('.child').each(function(){
-                //四边形下面的边超过了「人」
-                if($(this).offset().top + childHeight > screen.height - $('#man').height()){
+        function starOut(e){
+            starOnStage.current--;
+            starContainer.removeChild(e.target);
+        }
+        function starHit(){
+            for(var i=0; i<starContainer.children.length; i++){
+                var tmp_c = starContainer.children[i];
+                //四边形下面的边超过了人
+                if(tmp_c.y + imgs.star.height > canvas.height - imgs.man.height){
                     //四边形左下角点或者右下角点在 「人」里面
-                    if(($(this).offset().left >= $('#man').offset().left && $(this).offset().left <= $('#man').offset().left + $('#man').width()) || ($(this).offset().left + childWidth >= $('#man').offset().left && $(this).offset().left + childWidth <= $('#man').offset().left + $('#man').width())){
+                    if((tmp_c.x >= man.x && tmp_c.x <= man.x + imgs.man.width) || (tmp_c.x + imgs.star.width >= man.x && tmp_c.x + imgs.star.width <= man.x + imgs.man.width)){
                         
-                        if($(this).hasClass('star')){
-                            $(this).remove();
-                            addScore();
-                        }
-                        if($(this).hasClass('boom')){
-                            stopAnimate();
-                        }
+                        //删除元素
+                        starContainer.removeChildAt(i);
+                        //加分
+                        score++;
+                        addScore();
                     }
                 }
-
-            });
+            }
         }
+
+        //炸弹
+        function addBoom(){
+            //舞台中炸弹的数量超过了预设的总数，则退出
+            if(boomOnStage.current > boomOnStage.all){
+                return false;
+            }
+            var tmp_num = boomOnStage.all - boomOnStage.current;
+            for(var i=0; i<tmp_num; i++){
+                var child = new createjs.Bitmap(imgs.boom.src);
+                child.x = randomNum(0, canvas.width - imgs.boom.width);
+                child.y = 0;
+                boomContainer.addChild(child);
+                boomOnStage.current++;
+                createjs.Tween.get(child).to({y:canvas.height},randomNum(3,8)*1000).call(boomOut);
+
+            }
+        }
+        function boomOut(e){
+            boomOnStage.current--;
+            boomContainer.removeChild(e.target);
+        }
+        function boomHit(){
+            for(var i=0; i<boomContainer.children.length; i++){
+                var tmp_c = boomContainer.children[i];
+                //四边形下面的边超过了人
+                if(tmp_c.y + imgs.star.height > canvas.height - imgs.man.height){
+                    //四边形左下角点或者右下角点在 「人」里面
+                    if((tmp_c.x >= man.x && tmp_c.x <= man.x + imgs.man.width) || (tmp_c.x + imgs.star.width >= man.x && tmp_c.x + imgs.star.width <= man.x + imgs.man.width)){
+                        
+                        //停止移动人
+                        man.removeEventListener('pressmove', manMove)
+                        //停止运动
+                        for(var j=0; j<starContainer.children.length; j++){
+                            createjs.Tween.removeTweens(starContainer.children[j]);
+                        }
+                        for(var j=0; j<boomContainer.children.length; j++){
+                            createjs.Tween.removeTweens(boomContainer.children[j]);
+                        }
+
+                    }
+                }
+            }
+        }
+        
+        //帧频触发 
+        function tick(){
+            stage.update();
+            addStar();
+            addBoom();
+            starHit();
+            boomHit();
+        }
+
+        init();
 
     </script>
 </html>
